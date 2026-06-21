@@ -1,0 +1,7 @@
+<template>
+
+<Navbar/>
+
+<NuxtPage/>
+
+</template>
