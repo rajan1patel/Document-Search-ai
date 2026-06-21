@@ -1,13 +1,17 @@
-from passlib.context import CryptContext
+import bcrypt
 
 from datetime import datetime, timedelta 
 from jose import JWTError, jwt, JWTError
 from app.core.config import settings
 
-password_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto"
-)
+
+def _validate_password_length(password: str):
+    password_bytes = len(password.encode("utf-8"))
+
+    if password_bytes > 72:
+        raise ValueError(
+            f"password is {password_bytes} bytes; bcrypt only accepts up to 72 bytes"
+        )
 
 
 def create_access_token(data:dict):
@@ -56,7 +60,14 @@ def decode_access_token(token:str):
 
 def hash_password(password:str):
 
-    return password_context.hash(password)
+    _validate_password_length(password)
+
+    password_bytes = password.encode("utf-8")
+
+    return bcrypt.hashpw(
+        password_bytes,
+        bcrypt.gensalt()
+    ).decode("utf-8")
 
 
 
@@ -65,7 +76,9 @@ def verify_password(
     hashed_password:str
 ):
 
-    return password_context.verify(
-        plain_password,
-        hashed_password
+    _validate_password_length(plain_password)
+
+    return bcrypt.checkpw(
+        plain_password.encode("utf-8"),
+        hashed_password.encode("utf-8")
     )
