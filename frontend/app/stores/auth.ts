@@ -1,89 +1,44 @@
-import {defineStore} from "pinia"
+import { defineStore } from "pinia"
+import { api } from "../utils/api"
 
-import {api} from "../utils/api"
-
-
-
-export const useAuthStore =
-defineStore(
-"auth",
-{
-
-
-state:()=>({
-
-    user:null,
-
-    token:null
-
-}),
-
-
-
-actions:{
-
-    nitialize(){
-
-
-const token =
-localStorage.getItem(
-"token"
-)
-
-
-if(token){
-
-this.token=token
-
+interface AuthUser {
+  id: number
+  email: string
 }
 
+export const useAuthStore = defineStore("auth", {
+  state: () => ({
+    user: null as AuthUser | null,
+    token: null as string | null,
+  }),
 
-}
+  actions: {
+    initialize() {
+      if (!process.client) {
+        return
+      }
 
-async login(
-email:string,
-password:string
-){
+      const token = localStorage.getItem("token")
+      if (token) {
+        this.token = token
+      }
+    },
 
+    async login(email: string, password: string) {
+      const res = await api.post("/auth/login", {
+        email,
+        password,
+      })
 
-const res =
-await api.post(
-"/auth/login",
-{
-email,
-password
-}
-)
+      const token = res.data.access_token as string
+      this.token = token
+      localStorage.setItem("token", token)
+    },
 
-
-
-this.token =
-res.data.access_token
-
-
-
-localStorage.setItem(
-"token",this.token)
-
-
-
-},
-
-
-
-logout(){
-
-localStorage.removeItem(
-"token"
-)
-
-this.token=null
-
-}
-
-
-
-}
-
-
+    logout() {
+      localStorage.removeItem("token")
+      this.token = null
+      this.user = null
+    },
+  },
 })

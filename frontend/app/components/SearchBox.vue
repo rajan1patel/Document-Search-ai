@@ -3,7 +3,8 @@ import { ref } from "vue"
 import { useSearch } from "~/composables/useSearch"
 
 interface SearchResult {
-  document_id: number
+  filename: string | null
+  page: number
   chunk: string
   score: number
 }
@@ -68,13 +69,14 @@ async function runSearch() {
   <div v-else class="space-y-4">
     <div
       v-for="item in results"
-      :key="`${item.document_id}-${item.score}`"
+      :key="`${item.filename}-${item.page}-${item.score}`"
       class="bg-gradient-to-r from-blue-50 to-purple-50 border border-gray-200 rounded-lg p-6 hover:shadow-md transition duration-200"
     >
       <div class="flex items-start justify-between mb-3">
         <div>
           <p class="text-sm text-gray-600 font-medium">Document ID</p>
-          <h3 class="text-lg font-semibold text-gray-900">#{{ item.document_id }}</h3>
+          <h3 class="text-lg font-semibold text-gray-900">{{ item.filename || "Unknown document" }}</h3>
+          <p class="text-sm text-gray-500">Page {{ item.page }}</p>
         </div>
         <div class="text-right">
           <p class="text-sm text-gray-600 font-medium">Relevance Score</p>

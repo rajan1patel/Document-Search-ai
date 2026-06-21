@@ -1,5 +1,3 @@
- id="docs-page"
-
 <script setup lang="ts">
 
 import { ref } from "vue"
@@ -22,11 +20,21 @@ const loading = ref(false)
 
 async function loadDocuments(){
 
+    loading.value = true
+
+    try {
+
     const res = await api.get(
         "/documents"
     )
 
     documents.value = res.data
+
+    } finally {
+
+    loading.value = false
+
+    }
 
 }
 

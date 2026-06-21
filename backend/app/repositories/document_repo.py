@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.document import Document
+from app.models.documents import Document
 
 from sqlalchemy import select, delete
 

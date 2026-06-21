@@ -1,4 +1,9 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.dependencies import get_current_user
+from app.database.connection import get_db
+from app.models.user import User
 
 
 from app.schemas.search import (
@@ -21,13 +26,17 @@ router=APIRouter(
 
 @router.post("")
 async def search(
-    data:SearchRequest
+    data:SearchRequest,
+    db:AsyncSession=Depends(get_db),
+    user:User=Depends(get_current_user)
 ):
 
 
     result = await semantic_search(
+        db,
         data.query,
-        data.limit
+        data.limit,
+        user.id
     )
 
 

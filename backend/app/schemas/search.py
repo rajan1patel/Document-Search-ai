@@ -12,7 +12,9 @@ class SearchRequest(BaseModel):
 
 class SearchResult(BaseModel):
 
-    document_id:int
+    filename:str | None
+
+    page:int
 
     chunk:str
 

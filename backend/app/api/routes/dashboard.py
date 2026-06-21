@@ -8,7 +8,7 @@ from app.database.connection import get_db
 
 from app.api.dependencies import get_current_user
 
-from app.models.document import Document
+from app.models.documents import Document
 
 from app.models.user import User
 
@@ -48,6 +48,7 @@ async def dashboard(
 
     return {
 
-        "total_documents":count
+        "total_documents":count,
+        "processed_documents":count
 
     }

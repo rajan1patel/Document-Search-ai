@@ -18,6 +18,7 @@ from app.services.document_service import save_document
 from app.models.user import User
 
 from app.services.document_service import (
+    get_document_by_id,
     list_documents,
     remove_document
 )

@@ -2,7 +2,7 @@ import os
 import uuid
 
 
-from fastapi import UploadFile
+from fastapi import HTTPException, UploadFile
 
 from app.repositories.document_repo import (
     get_user_documents,
@@ -43,10 +43,15 @@ async def save_document(
 
     if file.content_type not in ALLOWED_TYPES:
 
-        raise Exception(
-            "File type not supported"
+        raise HTTPException(
+            status_code=400,
+            detail="File type not supported"
         )
 
+    os.makedirs(
+        UPLOAD_DIR,
+        exist_ok=True
+    )
 
     extension=file.filename.split(".")[-1]
 
@@ -86,7 +91,7 @@ async def save_document(
             "file_size":len(content),
             "extracted_text":result["text"],
 
-            "status":"uploaded"
+            "status":"processing"
         }
     )
 
@@ -112,10 +117,15 @@ async def save_document(
 
         milvus_service.insert_vector(
             document.id,
+            user_id,
             chunk["text"],
-            vector
+            vector,
+            chunk.get("page_number", 0)
         )
 
+    document.status = "completed"
+    await db.commit()
+    await db.refresh(document)
 
     return document
 
@@ -160,6 +170,10 @@ async def remove_document(
             document.file_path
         )
 
+    milvus_service.delete_document_vectors(
+        document_id,
+        user_id
+    )
 
     await delete_document(
         db,

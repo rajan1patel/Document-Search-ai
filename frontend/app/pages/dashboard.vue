@@ -1,5 +1,19 @@
-<script setup>
-const { data } = await useFetch("http://localhost:8000/dashboard")
+<script setup lang="ts">
+import { ref, onMounted } from "vue"
+import { api } from "~/utils/api"
+
+const data = ref({
+  total_documents: 0,
+  processed_documents: 0,
+})
+
+onMounted(async () => {
+  const res = await api.get("/dashboard")
+  data.value = {
+    total_documents: res.data.total_documents || 0,
+    processed_documents: res.data.processed_documents || res.data.total_documents || 0,
+  }
+})
 </script>
 
 <template>

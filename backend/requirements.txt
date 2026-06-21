@@ -13,5 +13,10 @@ python-dotenv
 
 passlib[bcrypt]
 python-jose
+email-validator
 
 python-multipart
+PyMuPDF
+python-docx
+sentence-transformers
+pymilvus

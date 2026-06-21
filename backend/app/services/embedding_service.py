@@ -7,9 +7,18 @@ class EmbeddingService:
 
     def __init__(self):
 
-        self.model = SentenceTransformer(
-            "all-MiniLM-L6-v2"
-        )
+        self.model = None
+
+
+    def _get_model(self):
+
+        if self.model is None:
+
+            self.model = SentenceTransformer(
+                "all-MiniLM-L6-v2"
+            )
+
+        return self.model
 
 
 
@@ -18,7 +27,7 @@ class EmbeddingService:
         text:str
     ):
 
-        vector = self.model.encode(
+        vector = self._get_model().encode(
             text
         )
 
@@ -31,7 +40,7 @@ class EmbeddingService:
         texts:list[str]
     ):
 
-        vectors=self.model.encode(
+        vectors=self._get_model().encode(
             texts
         )
 
