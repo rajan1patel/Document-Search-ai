@@ -83,6 +83,17 @@ onMounted(async () => {
             <p class="text-sm text-gray-600">Find your documents</p>
           </div>
         </NuxtLink>
+
+        <NuxtLink
+          to="/chat"
+          class="flex items-center gap-3 p-4 border-2 border-amber-200 rounded-lg hover:bg-amber-50 transition duration-200"
+        >
+          <span class="text-3xl">💬</span>
+          <div>
+            <h3 class="font-semibold text-gray-900">AI Chat</h3>
+            <p class="text-sm text-gray-600">Chat with your documents</p>
+          </div>
+        </NuxtLink>
       </div>
     </div>
   </div>

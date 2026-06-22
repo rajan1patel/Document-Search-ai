@@ -1,3 +1,6 @@
+import time
+import logging
+
 from pymilvus import (
     Collection,
     CollectionSchema,
@@ -9,6 +12,8 @@ from pymilvus import (
 
 from app.core.config import settings
 
+logger = logging.getLogger(__name__)
+
 
 class MilvusService:
     def __init__(self):
@@ -16,11 +21,25 @@ class MilvusService:
         self.collection = None
 
     def _connect(self):
-        connections.connect(
-            alias="default",
-            host=settings.MILVUS_HOST,
-            port=str(settings.MILVUS_PORT),
-        )
+        retries = 0
+        max_retries = 30
+        while retries < max_retries:
+            try:
+                connections.connect(
+                    alias="default",
+                    host=settings.MILVUS_HOST,
+                    port=str(settings.MILVUS_PORT),
+                )
+                logger.info("Connected to Milvus successfully")
+                return
+            except Exception as e:
+                retries += 1
+                logger.warning(
+                    "Milvus connection attempt %d/%d failed: %s",
+                    retries, max_retries, e,
+                )
+                time.sleep(2)
+        raise RuntimeError("Could not connect to Milvus after 30 retries")
 
     def _get_collection(self):
         self._connect()

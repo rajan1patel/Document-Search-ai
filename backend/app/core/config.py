@@ -23,6 +23,13 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000"
     ]
 
+    # LLM / DSPy Settings
+    OPENROUTER_API_KEY:str = ""
+    LLM_MODEL:str = "google/gemini-3.1-flash-image"
+    LLM_BASE_URL:str = "https://openrouter.ai/api/v1"
+    LLM_MAX_TOKENS:int = 2048
+    LLM_TEMPERATURE:float = 0.7
+
 
     class Config:
         env_file=".env"
