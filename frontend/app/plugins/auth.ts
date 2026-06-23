@@ -1,11 +1,4 @@
-export default defineNuxtPlugin(()=>{
-
-
-const auth =
-useAuthStore()
-
-
-auth.initialize()
-
-
+export default defineNuxtPlugin(() => {
+  const auth = useAuthStore()
+  auth.initialize()
 })

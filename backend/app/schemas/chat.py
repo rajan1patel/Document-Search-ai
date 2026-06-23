@@ -19,6 +19,20 @@ class Source(BaseModel):
     score: float
 
 
+class ChunkInfo(BaseModel):
+    page: int | None = None
+    chunk: str = ""
+    score: float = 0.0
+
+
+class GroupedSource(BaseModel):
+    filename: str
+    chunks: list[ChunkInfo]
+    avg_score: float = 0.0
+    total_chunks: int = 0
+
+
 class ChatResponse(BaseModel):
     answer: str
     sources: list[Source]
+    grouped_sources: list[GroupedSource] = []

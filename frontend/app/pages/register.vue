@@ -1,4 +1,8 @@
 <script setup lang="ts">
+definePageMeta({
+  middleware: "guest",
+})
+
 import { ref } from "vue"
 import { api } from "~/utils/api"
 import { useRouter } from "vue-router"

@@ -1,12 +1,11 @@
 export default defineNuxtRouteMiddleware((to, from) => {
-  // Skip on server-side rendering — localStorage is not available
   if (import.meta.server) {
     return
   }
 
   const token = localStorage.getItem("token")
 
-  if (!token) {
-    return navigateTo("/login")
+  if (token) {
+    return navigateTo("/dashboard")
   }
 })

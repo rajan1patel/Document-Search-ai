@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, nextTick, watch } from "vue"
-import { useChat, type Message, type Source } from "~/composables/useChat"
+import { useChat, type Message, type Source, type GroupedSource } from "~/composables/useChat"
 
 const { sendMessage } = useChat()
 
@@ -40,9 +40,9 @@ async function submit() {
 
   try {
     const history = messages.value.slice(0, -1) // exclude the just-added user msg
-    const { answer, sources } = await sendMessage(text, history)
+    const { answer, sources, groupedSources } = await sendMessage(text, history)
 
-    messages.value.push({ role: "assistant", content: answer, sources })
+    messages.value.push({ role: "assistant", content: answer, sources, groupedSources })
   } catch (err: any) {
     error.value = err?.response?.data?.detail || err.message || "Failed to get response"
     // Remove the user message on error so they can retry
@@ -59,6 +59,10 @@ function getSourceIcon(filename: string | null): string {
   if (ext === "docx" || ext === "doc") return "📘"
   if (ext === "txt") return "📄"
   return "📄"
+}
+
+function totalSourceCount(groups: GroupedSource[]): number {
+  return groups.reduce((sum, g) => sum + g.total_chunks, 0)
 }
 </script>
 
@@ -138,8 +142,8 @@ function getSourceIcon(filename: string | null): string {
               <p class="text-sm leading-relaxed whitespace-pre-wrap">{{ msg.content }}</p>
             </div>
 
-            <!-- Sources -->
-            <div v-if="msg.sources && msg.sources.length > 0" class="mt-2 ml-2">
+            <!-- Sources (grouped by file) -->
+            <div v-if="msg.groupedSources && msg.groupedSources.length > 0" class="mt-2 ml-2">
               <details class="group">
                 <summary
                   class="flex items-center gap-1.5 text-xs text-gray-500 hover:text-blue-600 cursor-pointer font-medium transition-colors select-none"
@@ -157,24 +161,34 @@ function getSourceIcon(filename: string | null): string {
                       d="M9 5l7 7-7 7"
                     />
                   </svg>
-                  {{ msg.sources.length }} source{{ msg.sources.length > 1 ? "s" : "" }}
+                  {{ totalSourceCount(msg.groupedSources) }} source{{ totalSourceCount(msg.groupedSources) > 1 ? "s" : "" }}
+                  from {{ msg.groupedSources.length }} file{{ msg.groupedSources.length > 1 ? "s" : "" }}
                 </summary>
-                <div class="mt-2 space-y-1.5">
+                <div class="mt-2 space-y-2">
                   <div
-                    v-for="(src, si) in msg.sources"
-                    :key="si"
-                    class="flex items-start gap-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100"
+                    v-for="(group, gi) in msg.groupedSources"
+                    :key="gi"
+                    class="bg-gray-50 rounded-lg border border-gray-100 overflow-hidden"
                   >
-                    <span class="text-sm flex-shrink-0 mt-0.5">{{ getSourceIcon(src.filename) }}</span>
-                    <div class="min-w-0">
-                      <div class="flex items-center gap-2 text-xs text-gray-600">
-                        <span class="font-medium truncate">{{ src.filename || "Unknown" }}</span>
-                        <span v-if="src.page" class="text-gray-400">· p.{{ src.page }}</span>
-                        <span class="ml-auto text-blue-600 font-semibold tabular-nums">
-                          {{ (src.score * 100).toFixed(0) }}%
-                        </span>
+                    <!-- File header -->
+                    <div class="flex items-center gap-2 px-3 py-2 bg-gray-100/70 border-b border-gray-100">
+                      <span class="text-sm flex-shrink-0">{{ getSourceIcon(group.filename) }}</span>
+                      <span class="text-xs font-semibold text-gray-700 truncate">{{ group.filename }}</span>
+                      <span class="text-[10px] text-gray-400 ml-auto">
+                        {{ group.total_chunks }} excerpt{{ group.total_chunks > 1 ? "s" : "" }}
+                        · {{ (group.avg_score * 100).toFixed(0) }}% match
+                      </span>
+                    </div>
+                    <!-- Chunks -->
+                    <div class="space-y-1 p-2">
+                      <div
+                        v-for="(chunk, ci) in group.chunks"
+                        :key="ci"
+                        class="text-xs text-gray-500 pl-2 border-l-2 border-blue-200"
+                      >
+                        <span v-if="chunk.page" class="text-[10px] text-blue-500 font-medium">p.{{ chunk.page }}</span>
+                        <p class="mt-0.5 line-clamp-2">{{ chunk.chunk }}</p>
                       </div>
-                      <p class="text-xs text-gray-500 mt-0.5 line-clamp-2">{{ src.chunk }}</p>
                     </div>
                   </div>
                 </div>

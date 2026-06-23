@@ -1,7 +1,11 @@
+import logging
 import dspy
 from typing import Optional
+from collections import defaultdict
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 # ──────────────────────────────────────────────
@@ -9,10 +13,19 @@ from app.core.config import settings
 # ──────────────────────────────────────────────
 
 class ChatSignature(dspy.Signature):
-    """You are a helpful document assistant. Answer the user's question based strictly on the provided document context. If the context doesn't contain enough information, say so clearly. Use the conversation history for context about previous questions."""
+    """You are a precise document assistant. Follow these rules strictly:
+
+    1. Answer ONLY using the provided document context. Do NOT use outside knowledge or make up information.
+    2. If the context doesn't contain enough information to answer completely, say so clearly — do not fill in gaps.
+    3. Reference source filenames when presenting information (e.g. "According to [filename.pdf]...").
+    4. When multiple chunks from the same file contain relevant info, consolidate them into a coherent answer.
+    5. Be thorough, specific, and well-structured. Use bullet points or sections for complex answers.
+    6. If the question refers to a previous conversation turn, use the conversation history for continuity.
+    7. Do NOT mention "the context" or "the provided documents" — just answer naturally as an AI assistant.
+    """
 
     context: str = dspy.InputField(
-        desc="Relevant excerpts from the user's documents"
+        desc="Document excerpts grouped by source file. Each group contains filename, page numbers, and relevant text excerpts."
     )
     conversation_history: str = dspy.InputField(
         desc="Previous messages in the conversation, formatted as role: message pairs"
@@ -21,7 +34,7 @@ class ChatSignature(dspy.Signature):
         desc="The user's current question"
     )
     answer: str = dspy.OutputField(
-        desc="A thorough, accurate answer based on the context and conversation history"
+        desc="A thorough, accurate answer based strictly on the context, citing sources naturally"
     )
 
 
@@ -63,7 +76,18 @@ class DspyService:
         if self._initialized:
             return
 
+        if not settings.OPENROUTER_API_KEY:
+            raise RuntimeError(
+                "OPENROUTER_API_KEY is not set. "
+                "Add a valid OpenRouter API key to the .env file."
+            )
+
         # Build the LM
+        logger.info(
+            "Initializing DSPy with model=%s, base_url=%s",
+            settings.LLM_MODEL,
+            settings.LLM_BASE_URL,
+        )
         self._lm = dspy.LM(
             model=f"openrouter/{settings.LLM_MODEL}",
             api_key=settings.OPENROUTER_API_KEY,
@@ -91,19 +115,62 @@ class DspyService:
             lines.append(f"{role}: {content}")
         return "\n".join(lines)
 
+    @staticmethod
+    def group_sources_by_file(sources: list[dict]) -> list[dict]:
+        """Group search results by filename. Returns a list of dicts:
+        {filename, chunks: [{page, chunk, score}], avg_score, total_chunks}
+        """
+        if not sources:
+            return []
+
+        groups = defaultdict(list)
+        for src in sources:
+            filename = src.get("filename", "Unknown")
+            groups[filename].append(src)
+
+        result = []
+        for filename, items in groups.items():
+            avg_score = sum(item.get("score", 0) for item in items) / len(items)
+            chunks = [
+                {
+                    "page": item.get("page"),
+                    "chunk": item.get("chunk", ""),
+                    "score": item.get("score", 0),
+                }
+                for item in items
+            ]
+            result.append({
+                "filename": filename,
+                "chunks": chunks,
+                "avg_score": round(avg_score, 4),
+                "total_chunks": len(chunks),
+            })
+
+        # Sort by average score descending
+        result.sort(key=lambda g: g["avg_score"], reverse=True)
+        return result
+
     def format_context(self, sources: list[dict]) -> str:
-        """Convert search results into a single context block for the prompt."""
+        """Convert search results into a single context block for the prompt,
+        grouped by source file."""
         if not sources:
             return "No relevant documents found."
 
+        groups = self.group_sources_by_file(sources)
         blocks = []
-        for i, src in enumerate(sources, 1):
-            filename = src.get("filename", "Unknown")
-            page = src.get("page")
-            chunk = src.get("chunk", "")
-            page_info = f" (page {page})" if page else ""
+        for i, group in enumerate(groups, 1):
+            filename = group["filename"]
+            chunks = group["chunks"]
+            page_info = ", ".join(
+                f"p.{c['page']}" for c in chunks if c["page"] is not None
+            )
+            page_str = f" (pages: {page_info})" if page_info else ""
+
+            excerpts = "\n".join(
+                f"  [{i}.{j}] {c['chunk']}" for j, c in enumerate(chunks, 1)
+            )
             blocks.append(
-                f"[Source {i}] — {filename}{page_info}:\n{chunk}\n"
+                f"[Source {i}] — {filename}{page_str}:\n{excerpts}\n"
             )
         return "\n".join(blocks)
 
@@ -116,18 +183,36 @@ class DspyService:
         history: list[dict] | None = None,
     ) -> str:
         """Generate a DSPy-powered answer using the retrieved document sources."""
-        self._ensure_initialized()
+        try:
+            self._ensure_initialized()
+        except Exception as e:
+            logger.error("Failed to initialize DSPy: %s", e, exc_info=True)
+            raise RuntimeError(
+                "AI model is not configured. Please set a valid OPENROUTER_API_KEY in the .env file."
+            ) from e
+
+        if not sources:
+            return (
+                "I couldn't find any relevant documents to answer your question. "
+                "Please try uploading documents first or rephrase your query."
+            )
 
         context_str = self.format_context(sources)
         history_str = self.format_history(history or [])
 
-        answer = self._agent.forward(
-            context=context_str,
-            history=history_str,
-            question=query,
-        )
-
-        return answer
+        try:
+            answer = self._agent.forward(
+                context=context_str,
+                history=history_str,
+                question=query,
+            )
+            return answer
+        except Exception as e:
+            logger.error("DSPy LLM call failed: %s", e, exc_info=True)
+            raise RuntimeError(
+                f"AI model call failed: {e}. "
+                "Please check your OpenRouter API key and credit balance."
+            ) from e
 
 
 # Singleton shared across the app

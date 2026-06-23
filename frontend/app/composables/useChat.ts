@@ -7,10 +7,24 @@ export interface Source {
   score: number
 }
 
+export interface ChunkInfo {
+  page: number | null
+  chunk: string
+  score: number
+}
+
+export interface GroupedSource {
+  filename: string
+  chunks: ChunkInfo[]
+  avg_score: number
+  total_chunks: number
+}
+
 export interface Message {
   role: "user" | "assistant"
   content: string
   sources?: Source[]
+  groupedSources?: GroupedSource[]
 }
 
 export function useChat() {
@@ -18,7 +32,7 @@ export function useChat() {
     query: string,
     history: Message[],
     limit: number = 5
-  ): Promise<{ answer: string; sources: Source[] }> {
+  ): Promise<{ answer: string; sources: Source[]; groupedSources: GroupedSource[] }> {
     const historyPayload = history.map((m) => ({
       role: m.role,
       content: m.content,
@@ -33,6 +47,7 @@ export function useChat() {
     return {
       answer: res.data.answer,
       sources: res.data.sources,
+      groupedSources: res.data.grouped_sources ?? [],
     }
   }
 

@@ -1,4 +1,8 @@
 <script setup lang="ts">
+definePageMeta({
+  middleware: "auth",
+})
+
 import { ref, onMounted } from "vue"
 import { api } from "~/utils/api"
 

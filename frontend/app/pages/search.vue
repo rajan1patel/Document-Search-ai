@@ -1,3 +1,9 @@
+<script setup lang="ts">
+definePageMeta({
+  middleware: "auth",
+})
+</script>
+
 <template>
 <div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
   <Navbar />

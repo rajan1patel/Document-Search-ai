@@ -17,6 +17,10 @@ services:
     depends_on:
       - backend
 
+    volumes:
+    - ./frontend:/app
+    - /app/node_modules
+
 
   backend:
 
@@ -51,6 +55,7 @@ services:
 
     volumes:
       - ./backend:/app
+      - /app/__pycache__
 
 
 
@@ -113,6 +118,8 @@ services:
 
       ETCD_ADVERTISE_CLIENT_URLS: http://etcd:2379
 
+      ETCD_DATA_DIR: /etcd-data
+
     healthcheck:
 
       test: ["CMD", "etcdctl", "endpoint", "health"]
@@ -122,6 +129,10 @@ services:
       timeout: 3s
 
       retries: 10
+
+    volumes:
+
+      - etcd_data:/etcd-data
 
 
 
@@ -155,6 +166,10 @@ services:
       timeout: 3s
 
       retries: 10
+
+    volumes:
+
+      - minio_data:/data
 
 
 
@@ -206,3 +221,5 @@ services:
 volumes:
 
   postgres_data:
+  etcd_data:
+  minio_data:

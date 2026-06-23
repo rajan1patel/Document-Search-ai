@@ -12,6 +12,10 @@ export const useAuthStore = defineStore("auth", {
     token: null as string | null,
   }),
 
+  getters: {
+    isAuthenticated: (state) => !!state.token,
+  },
+
   actions: {
     initialize() {
       if (!process.client) {
@@ -32,6 +36,7 @@ export const useAuthStore = defineStore("auth", {
 
       const token = res.data.access_token as string
       this.token = token
+      this.user = res.data.user ?? null
       localStorage.setItem("token", token)
     },
 
