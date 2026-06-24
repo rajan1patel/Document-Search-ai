@@ -20,4 +20,5 @@ PyMuPDF
 python-docx
 sentence-transformers
 pymilvus
+httpx
 dspy-ai

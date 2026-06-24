@@ -10,6 +10,20 @@ from app.api.routes.documents import router as document_router
 from app.api.routes.search import router as search_router
 from app.api.routes.dashboard import router as dashboard_router
 from app.api.routes.chat import router as chat_router
+from app.api.routes.expert_discovery import router as expert_discovery_router
+
+# ── Logging ─────────────────────────────────
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)-7s | %(name)-30s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+# Quiet down noisy libs
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+
 app = FastAPI(
     title=settings.APP_NAME
 )
@@ -30,6 +44,7 @@ app.include_router(user_router)
 app.include_router(search_router)
 app.include_router(dashboard_router)
 app.include_router(chat_router)
+app.include_router(expert_discovery_router)
 
 @app.get("/")
 async def root():

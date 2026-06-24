@@ -49,6 +49,13 @@ function handleLogout() {
           💬 Chat
         </NuxtLink>
 
+        <NuxtLink
+          to="/expert-discovery"
+          class="px-4 py-2 text-gray-700 hover:text-blue-600 font-medium transition duration-200 border-b-2 border-transparent hover:border-blue-600"
+        >
+          🔬 Experts
+        </NuxtLink>
+
         <button
           @click="handleLogout"
           class="ml-4 px-4 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 font-medium transition duration-200 rounded-lg border border-red-200 hover:border-red-300"

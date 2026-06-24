@@ -30,9 +30,13 @@ class Settings(BaseSettings):
     LLM_MAX_TOKENS:int = 2048
     LLM_TEMPERATURE:float = 0.7
 
+    # X-Search API (external patent search)
+    XSEARCH_API_KEY:str = ""
+    XSEARCH_BASE_URL:str = "http://192.168.0.57:8082/patent_search"
 
     class Config:
         env_file=".env"
+        extra = "ignore"  # ignore unknown env vars
 
 
 
