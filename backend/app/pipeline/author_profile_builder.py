@@ -87,6 +87,7 @@ def build_author_profile(
         career_years=author_info.career_years,
         first_year=author_info.first_year,
         last_year=author_info.last_year,
+        orcid=author_info.orcid,
     )
 
     logger.info(

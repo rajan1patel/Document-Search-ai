@@ -43,6 +43,7 @@ class AuthorInfo:
     career_years: int = 0
     first_year: int = 0
     last_year: int = 0
+    orcid: str = ""  # Normalized ORCID iD, e.g. "0000-0002-2192-9543"
 
 
 @dataclass

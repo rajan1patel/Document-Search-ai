@@ -247,6 +247,7 @@ class AuthorProfileSchema(BaseModel):
     matched_topic: Optional[str] = None
     matched_topic_count: int = 0
     topic_match_score: float = 0.0
+    orcid: str = ""  # Normalized ORCID iD, e.g. "0000-0002-2192-9543"
 
 
 # ── Layer 5: LLM Validation ─────────────────
@@ -288,6 +289,11 @@ class RankedExpertSchema(BaseModel):
     institution: str = ""
     first_year: int = 0
     last_year: int = 0
+    contacts: list["ContactEntry"] = Field(
+        default_factory=list,
+        description="Public contact info enriched from ORCID after ranking",
+    )
+    orcid: str = ""  # Normalized ORCID iD, e.g. "0000-0002-2192-9543"
 
 
 # ── API Request / Response ──────────────────
@@ -296,6 +302,14 @@ class ResearchExpertRequest(BaseModel):
     """Request body for POST /experts/search."""
     query: str = Field(..., description="Natural language query, e.g. 'Find experts in quantum error correction'")
     top_k: int = Field(default=5, ge=1, le=50, description="Number of top experts to return")
+
+
+class ContactEntry(BaseModel):
+    """A single contact entry from ORCID enrichment."""
+    type: str = Field(..., description="Contact type: 'email' or 'url'")
+    value: str = Field(..., description="The email address or URL")
+    label: str = Field(default="", description="Display label (for URLs)")
+    source: str = Field(default="orcid", description="Source of the contact data")
 
 
 class ResearchExpertOutput(BaseModel):
@@ -321,6 +335,11 @@ class ResearchExpertOutput(BaseModel):
     first_year: int = 0
     last_year: int = 0
     openalex_url: str = ""
+    contacts: list[ContactEntry] = Field(
+        default_factory=list,
+        description="Public contact info enriched from ORCID",
+    )
+    orcid: str = ""  # Normalized ORCID iD for linking to ORCID profile
 
 
 class ResearchExpertResponse(BaseModel):

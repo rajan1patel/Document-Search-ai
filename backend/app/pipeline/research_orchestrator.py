@@ -32,11 +32,14 @@ from app.pipeline.paper_evidence import (
 )
 from app.pipeline.research_retrieval import retrieve_works
 from app.pipeline.schemas import (
+    AuthorProfileSchema,
+    ContactEntry,
     ResearchExpertOutput,
     ResearchExpertRequest,
     ResearchExpertResponse,
     TopicValidationResult,
 )
+from app.services.orcid_service import fetch_orcid_contacts
 
 logger = logging.getLogger(__name__)
 
@@ -257,6 +260,38 @@ def run_expert_pipeline(
         })
     )
 
+    # ── [L7] ORCID Contact Enrichment ──────────
+    logger.info("[L7] Enriching ranked experts with ORCID public contacts...")
+
+    # Build profile lookup for ORCID data
+    profile_by_id: dict[str, AuthorProfileSchema] = {
+        p.author_id: p for p in validated_profiles
+    }
+
+    enriched_count = 0
+    orcid_skipped = 0
+    for r in ranked:
+        profile = profile_by_id.get(r.author_id)
+        if not profile or not profile.orcid:
+            orcid_skipped += 1
+            continue
+
+        r.orcid = profile.orcid
+        contacts = fetch_orcid_contacts(profile.orcid)
+        if contacts:
+            r.contacts = contacts
+            enriched_count += 1
+
+    logger.info(
+        json.dumps({
+            "event": "orcid_enrichment",
+            "query_id": query_id,
+            "ranked_experts": len(ranked),
+            "enriched_with_contacts": enriched_count,
+            "skipped_no_orcid": orcid_skipped,
+        })
+    )
+
     # ── Build Response ─────────────────────────
     experts = []
     for r in ranked:
@@ -272,6 +307,8 @@ def run_expert_pipeline(
             first_year=r.first_year,
             last_year=r.last_year,
             openalex_url=f"https://openalex.org/authors/{r.author_id}",
+            contacts=r.contacts,
+            orcid=r.orcid,
         ))
 
     logger.info(

@@ -152,6 +152,12 @@ class OpenAlexProvider(ResearchProvider):
                 last_year = max(years)
                 career_years = last_year - first_year
 
+            # Extract and normalize ORCID iD
+            orcid_raw = data.get("orcid", "") or ""
+            orcid = orcid_raw.strip().rstrip("/")
+            if orcid.startswith("https://orcid.org/"):
+                orcid = orcid.replace("https://orcid.org/", "")
+
             author = AuthorInfo(
                 author_id=aid,
                 name=data.get("display_name", ""),
@@ -165,6 +171,7 @@ class OpenAlexProvider(ResearchProvider):
                 career_years=career_years,
                 first_year=first_year,
                 last_year=last_year,
+                orcid=orcid,
             )
 
             logger.info(
