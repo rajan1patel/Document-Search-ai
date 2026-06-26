@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 def retrieve_works(
     query: str,
     page: int = 1,
-    page_size: int = 100 ,
+    page_size: int = 10 ,
     api_key_override: Optional[str] = None,
 ) -> dict[str, Any]:
     """

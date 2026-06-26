@@ -1,5 +1,12 @@
 import { api } from "~/utils/api"
 
+export interface ContactEntry {
+  type: "email" | "url"
+  value: string
+  label: string
+  source: string
+}
+
 export interface ResearchExpertOutput {
   author_id: string
   author: string
@@ -23,6 +30,8 @@ export interface ResearchExpertOutput {
   first_year: number
   last_year: number
   openalex_url: string
+  contacts: ContactEntry[]
+  orcid: string
 }
 
 export interface ResearchExpertResponse {
