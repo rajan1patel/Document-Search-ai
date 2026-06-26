@@ -98,6 +98,17 @@ onMounted(async () => {
             <p class="text-sm text-gray-600">Chat with your documents</p>
           </div>
         </NuxtLink>
+
+        <NuxtLink
+          to="/research-experts"
+          class="flex items-center gap-3 p-4 border-2 border-indigo-200 rounded-lg hover:bg-indigo-50 transition duration-200"
+        >
+          <span class="text-3xl">🔬</span>
+          <div>
+            <h3 class="font-semibold text-gray-900">Research Experts</h3>
+            <p class="text-sm text-gray-600">Find top researchers via X-Search + OpenAlex</p>
+          </div>
+        </NuxtLink>
       </div>
     </div>
   </div>

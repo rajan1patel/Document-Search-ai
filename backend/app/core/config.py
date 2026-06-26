@@ -27,12 +27,16 @@ class Settings(BaseSettings):
     OPENROUTER_API_KEY:str = ""
     LLM_MODEL:str = "google/gemini-3.1-flash-image"
     LLM_BASE_URL:str = "https://openrouter.ai/api/v1"
-    LLM_MAX_TOKENS:int = 2048
+    LLM_MAX_TOKENS:int = 16384
     LLM_TEMPERATURE:float = 0.7
+    LLM_TIMEOUT:int = 180
 
     # X-Search API (external patent search)
     XSEARCH_API_KEY:str = ""
     XSEARCH_BASE_URL:str = "http://192.168.0.57:8082/patent_search"
+
+    # OpenAlex API (research author profiles)
+    OPENALEX_APIKEY:str = ""
 
     class Config:
         env_file=".env"

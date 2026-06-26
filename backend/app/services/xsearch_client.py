@@ -1,18 +1,19 @@
 """
 X-Search API Client
 
-Calls the external Landscapes / X-Search API to fetch patent documents
-for a given natural-language query.
+Calls the external Landscapes / X-Search API to fetch research documents
+(patents + NPL / research papers) for a given natural-language query.
 
 Endpoint:
   POST /patent_search/xsearch
   Header: X-Gravitee-Api-Key
-  Body: { nl_query: str, page: int, page_size: int }
+  Body: { nl_query, corpora?, page?, page_size? }
 
 Response:
   {
     xsearch_id: str,
-    patent: { hits: [ ... ] }
+    patent: { hits: [...] },
+    npl: { hits: [...] }       ← research papers when corpora includes "npl"
   }
 """
 from __future__ import annotations
@@ -30,7 +31,7 @@ XSEARCH_TIMEOUT = 60.0  # seconds
 
 
 class XSearchClient:
-    """Client for the external patent search API."""
+    """Client for the external research search API."""
 
     def __init__(self):
         self.base_url: str = settings.XSEARCH_BASE_URL.rstrip("/")
@@ -43,6 +44,7 @@ class XSearchClient:
     def search(
         self,
         nl_query: str,
+        corpora: Optional[list[str]] = None,
         page: int = 1,
         page_size: int = 20,
         api_key_override: Optional[str] = None,
@@ -50,10 +52,20 @@ class XSearchClient:
         """
         Call the X-Search API and return the full JSON response.
 
+        Args:
+            nl_query: Natural language search query
+            corpora: Which document collections to search.
+                     Default ["patent", "npl"] searches both patents and
+                     non-patent literature (research papers).
+            page: Page number for pagination
+            page_size: Results per page
+            api_key_override: Optional override for API key
+
         Returns:
             {
                 "xsearch_id": "...",
-                "patent": { "hits": [ ... ] }
+                "patent": { "hits": [...] },
+                "npl": { "hits": [...] }      ← when "npl" in corpora
             }
 
         Raises:
@@ -72,15 +84,17 @@ class XSearchClient:
             "Content-Type": "application/json",
             "X-Gravitee-Api-Key": api_key,
         }
-        payload = {
+        payload: dict[str, Any] = {
             "nl_query": nl_query,
             "page": page,
             "page_size": page_size,
         }
+        if corpora:
+            payload["corpora"] = corpora
 
         logger.info(
-            "X-Search request: url=%s | query='%s' | page=%d | page_size=%d",
-            url, nl_query[:80], page, page_size,
+            "X-Search request: url=%s | query='%s' | corpora=%s | page=%d | page_size=%d",
+            url, nl_query[:80], corpora, page, page_size,
         )
 
         try:
@@ -90,9 +104,10 @@ class XSearchClient:
                 data = resp.json()
                 hit_count = self._count_hits(data)
                 logger.info(
-                    "X-Search response: xsearch_id=%s | hits=%d",
+                    "X-Search response: xsearch_id=%s | total_hits=%d",
                     data.get("xsearch_id", "?"), hit_count,
                 )
+                logger.debug("X-Search response data: %s", data)
                 return data
         except httpx.HTTPStatusError as exc:
             logger.error(
@@ -115,21 +130,40 @@ class XSearchClient:
 
     def extract_hits(self, data: dict[str, Any]) -> list[dict[str, Any]]:
         """
-        Extract the list of patent documents (hits) from the X-Search response.
+        Extract merged list of ALL research documents (patent + npl).
 
-        Handles multiple possible response shapes:
+        Handles:
+          { patent: { hits: [...] }, npl: { hits: [...] } }
           { patent: { hits: [...] } }
+          { npl: { hits: [...] } }
           { hits: [...] }
-          or a top-level list
         """
-        # Try { patent: { hits: [...] } }
+        all_hits: list[dict[str, Any]] = []
+
+        # Extract patent hits
         patent = data.get("patent")
         if isinstance(patent, dict):
             hits = patent.get("hits")
             if isinstance(hits, list):
-                return hits
+                for h in hits:
+                    if isinstance(h, dict):
+                        h["_doc_type"] = "patent"
+                all_hits.extend(hits)
 
-        # Try { hits: [...] }
+        # Extract NPL (research paper) hits
+        npl = data.get("npl")
+        if isinstance(npl, dict):
+            hits = npl.get("hits")
+            if isinstance(hits, list):
+                for h in hits:
+                    if isinstance(h, dict):
+                        h["_doc_type"] = "npl"
+                all_hits.extend(hits)
+
+        if all_hits:
+            return all_hits
+
+        # Fallback: try { hits: [...] }
         hits = data.get("hits")
         if isinstance(hits, list):
             return hits
@@ -147,12 +181,17 @@ class XSearchClient:
 
     @staticmethod
     def _count_hits(data: dict[str, Any]) -> int:
-        """Count hits without extracting them (for logging)."""
-        patent = data.get("patent")
-        if isinstance(patent, dict):
-            hits = patent.get("hits")
-            if isinstance(hits, list):
-                return len(hits)
+        """Count total hits across  npl sections."""
+        total = 0
+        for section in ("patent", "npl"):
+            sec = data.get(section)
+            if isinstance(sec, dict):
+                hits = sec.get("hits")
+                if isinstance(hits, list):
+                    total += len(hits)
+        if total > 0:
+            return total
+        # Fallback
         hits = data.get("hits")
         if isinstance(hits, list):
             return len(hits)

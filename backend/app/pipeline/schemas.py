@@ -160,3 +160,172 @@ class DiscoverExpertsResponse(BaseModel):
     total_documents_found: int = 0
     raw_documents: list[dict] = Field(default_factory=list, description="Raw patent JSON as-is from X-Search API")
     experts: list[ExpertOutput] = Field(default_factory=list)
+
+
+# ══════════════════════════════════════════════
+# Research Expert Discovery — Layer Schemas
+# ══════════════════════════════════════════════
+
+# ── Layer 1: Research Work ───────────────────
+
+class ResearchWorkAuthor(BaseModel):
+    """Author entry within a research work — only identity fields from X-Search."""
+    author_id: str = Field(default="", description="OpenAlex author ID")
+    name: str = Field(default="", description="Author display name")
+    position: str = Field(default="", description="Author position: first, middle, last")
+
+
+class ResearchWorkSchema(BaseModel):
+    """
+    A single research work from X-Search.
+    Only work_id, title, and authors extracted — all other data comes from OpenAlex.
+    """
+    work_id: str = Field(default="", description="Unique work identifier")
+    title: str = Field(default="", description="Work title")
+    authors: list[ResearchWorkAuthor] = Field(default_factory=list)
+
+
+# ── Layer 2: Paper Evidence ──────────────────
+
+class PaperEvidenceRecord(BaseModel):
+    """Lightweight evidence record for a single work (in-memory)."""
+    work_id: str
+    title: str
+    author_ids: list[str] = Field(default_factory=list)
+    author_names: list[str] = Field(default_factory=list)
+    author_positions: dict[str, str] = Field(
+        default_factory=dict,
+        description="Mapping of author_id → position (first/middle/last)",
+    )
+
+
+class PaperEvidenceStore(BaseModel):
+    """In-memory store of evidence per query_id. NOT persisted to DB."""
+    query_id: str
+    works: list[PaperEvidenceRecord] = Field(default_factory=list)
+
+
+# ── Layer 3: Author Extraction ───────────────
+
+class AuthorEvidence(BaseModel):
+    """Extracted author with evidence from research works."""
+    author_id: str
+    name: str
+    matched_works: list[str] = Field(default_factory=list, description="Work IDs this author appears in")
+    matched_titles: list[str] = Field(default_factory=list)
+    positions: list[str] = Field(default_factory=list)
+    first_author_count: int = 0
+    last_author_count: int = 0
+    middle_author_count: int = 0
+    total_citations: int = 0
+
+
+# ── Layer 4: OpenAlex Author Profile ─────────
+
+class AuthorTopic(BaseModel):
+    """A research topic from OpenAlex."""
+    topic_name: str = ""
+    count: int = 0
+    subfield: str = ""
+
+
+class AuthorProfileSchema(BaseModel):
+    """Full author profile from OpenAlex enrichment."""
+    author_id: str
+    name: str
+    works_count: int = 0
+    cited_by_count: int = 0
+    h_index: int = 0
+    i10_index: int = 0
+    counts_by_year: dict[str, int] = Field(default_factory=dict)
+    topics: list[AuthorTopic] = Field(default_factory=list)
+    subfields: list[str] = Field(default_factory=list)
+    institution: str = ""
+    career_years: int = 0
+    first_year: int = 0
+    last_year: int = 0
+    matched_topic: Optional[str] = None
+    matched_topic_count: int = 0
+    topic_match_score: float = 0.0
+
+
+# ── Layer 5: LLM Validation ─────────────────
+
+class TopicValidationResult(BaseModel):
+    """LLM's validation of author topic relevance."""
+    match: str = "no"  # "yes" or "no"
+    matched_topics: list[dict] = Field(
+        default_factory=list,
+        description="[{topic_name, count, reason}]",
+    )
+
+
+# ── Layer 6: Expert Ranking ─────────────────
+
+class ComponentScores(BaseModel):
+    """Breakdown of each scoring component."""
+    problem_topic_match: float = 0.0
+    topic_depth: float = 0.0
+    research_continuity: float = 0.0
+    research_ownership: float = 0.0
+    impact: float = 0.0
+
+
+class RankedExpertSchema(BaseModel):
+    """Final ranked expert output."""
+    author_id: str
+    name: str
+    expert_score: float = 0.0
+    metrics: dict = Field(default_factory=lambda: {
+        "works_count": 0,
+        "citations": 0,
+        "h_index": 0,
+    })
+    matched_topic: Optional[dict] = None
+    all_topics: list[dict] = Field(default_factory=list)
+    score_breakdown: ComponentScores = Field(default_factory=ComponentScores)
+    reasoning: list[str] = Field(default_factory=list)
+    institution: str = ""
+    first_year: int = 0
+    last_year: int = 0
+
+
+# ── API Request / Response ──────────────────
+
+class ResearchExpertRequest(BaseModel):
+    """Request body for POST /experts/search."""
+    query: str = Field(..., description="Natural language query, e.g. 'Find experts in quantum error correction'")
+    top_k: int = Field(default=5, ge=1, le=50, description="Number of top experts to return")
+
+
+class ResearchExpertOutput(BaseModel):
+    """Single expert in the research expert discovery response."""
+    author_id: str = ""
+    author: str
+    score: float
+    metrics: dict = Field(default_factory=lambda: {
+        "works_count": 0,
+        "citations": 0,
+        "h_index": 0,
+    })
+    matched_topic: Optional[dict] = Field(
+        default=None,
+        description="{topic_name, topic_count} of best matched topic",
+    )
+    all_topics: list[dict] = Field(
+        default_factory=list,
+        description="[{topic_name, count, subfield}]",
+    )
+    why: list[str] = Field(default_factory=list)
+    institution: str = ""
+    first_year: int = 0
+    last_year: int = 0
+    openalex_url: str = ""
+
+
+class ResearchExpertResponse(BaseModel):
+    """Response body for POST /experts/search."""
+    query: str
+    total_works_found: int = 0
+    total_authors_extracted: int = 0
+    experts: list[ResearchExpertOutput] = Field(default_factory=list)

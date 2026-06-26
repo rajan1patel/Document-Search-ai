@@ -50,11 +50,18 @@ function handleLogout() {
         </NuxtLink>
 
         <NuxtLink
+          to="/research-experts"
+          class="px-4 py-2 text-gray-700 hover:text-blue-600 font-medium transition duration-200 border-b-2 border-transparent hover:border-blue-600"
+        >
+          🔬 Research Experts
+        </NuxtLink>
+
+        <!-- <NuxtLink
           to="/expert-discovery"
           class="px-4 py-2 text-gray-700 hover:text-blue-600 font-medium transition duration-200 border-b-2 border-transparent hover:border-blue-600"
         >
-          🔬 Experts
-        </NuxtLink>
+          📜 Patent Experts
+        </NuxtLink> -->
 
         <button
           @click="handleLogout"

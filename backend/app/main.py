@@ -11,6 +11,8 @@ from app.api.routes.search import router as search_router
 from app.api.routes.dashboard import router as dashboard_router
 from app.api.routes.chat import router as chat_router
 from app.api.routes.expert_discovery import router as expert_discovery_router
+from app.api.routes.research_experts import router as research_experts_router
+from app.api.middleware import RequestLoggingMiddleware
 
 # ── Logging ─────────────────────────────────
 import logging
@@ -27,6 +29,9 @@ logging.getLogger("urllib3").setLevel(logging.WARNING)
 app = FastAPI(
     title=settings.APP_NAME
 )
+
+# Middleware: logging (register before CORS to log everything)
+app.add_middleware(RequestLoggingMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -45,6 +50,7 @@ app.include_router(search_router)
 app.include_router(dashboard_router)
 app.include_router(chat_router)
 app.include_router(expert_discovery_router)
+app.include_router(research_experts_router)
 
 @app.get("/")
 async def root():

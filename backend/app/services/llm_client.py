@@ -24,6 +24,7 @@ class LLMClient:
         self.model: str = settings.LLM_MODEL
         self.max_tokens: int = settings.LLM_MAX_TOKENS
         self.temperature: float = settings.LLM_TEMPERATURE
+        self.timeout: int = settings.LLM_TIMEOUT
 
     def _headers(self) -> dict:
         return {
@@ -70,7 +71,7 @@ class LLMClient:
         )
 
         try:
-            with httpx.Client(timeout=60.0) as client:
+            with httpx.Client(timeout=self.timeout) as client:
                 resp = client.post(
                     f"{self.base_url}/chat/completions",
                     headers=self._headers(),
